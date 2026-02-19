@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+mcp
+fastmcp
+PyPDF2
+httpx
+pydantic
+python-dotenv
