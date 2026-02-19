@@ -1,51 +1,100 @@
-# Multiagent Platform (A2A + MCP + Agent Cards)
+# A2A + MCP Orchestrator
 
-This project shows how to build a multi-agent system where agents discover and call each other dynamically, use MCP tools for domain actions, and advertise capabilities through Agent Cards.
+This project demonstrates how to build a scalable multi-agent system where agents dynamically discover and call each other, execute domain tools via MCP, and coordinate through a central orchestrator.
 
-## How A2A is used
+The architecture is capability-driven, not hardcoded. Any agent can collaborate with another as long as capabilities match.
 
-- `registry/` is the discovery layer.
-- Each agent registers on startup (`/register`) and deregisters on shutdown (`/deregister`).
-- Services discover collaborators by capability (`/discover` or `/cards`) instead of hardcoded peer URLs.
-- `orchestrator/` receives user requests and routes them to the best coordinator agent (`trainer_agent` in this domain).
+---
 
-Result: any agent can call any other agent as long as capability matches.
+## A2A (Agent-to-Agent Communication)
 
-## How MCP is used
+A2A enables agents to discover and communicate with each other dynamically.
 
-- MCP servers live in `mcp_servers/` and expose tools (nutrition, workouts, progress).
-- Domain agents connect to MCP servers via stdio using `MCPToolClient` in `agents/common.py`.
-- Agents call `session.call_tool(...)` and include results in their plan output.
+### Discovery Layer
 
-Result: tool execution is isolated from orchestration logic and can be swapped per domain.
+* The `registry/` service acts as the discovery backbone.
+* Each agent registers itself on startup (`/register`) and deregisters on shutdown (`/deregister`).
+* Agents are discovered based on capabilities using `/discover` or `/cards`.
 
-## How Agent Cards are used
+There are no hardcoded peer URLs. Communication is entirely metadata-driven.
 
-- Every agent exposes `GET /agent-card`.
-- On startup, each agent registers its card in the registry (`agent_card` payload field).
-- Orchestrator and trainer discover cards from `GET /cards` and call each agent through card metadata (`url`, `query_endpoint`, `capabilities`).
+### Agent Cards (Part of A2A)
 
-Result: routing is metadata-driven, not implementation-driven.
+Agent Cards are the foundation of discoverability.
 
-## Why this scales beyond fitness
+* Every agent exposes `GET /agent-card`.
+* On startup, agents register their card with the registry.
+* The card includes:
 
-This repo uses fitness agents (`muscle`, `cardio`, `diet`, `trainer`) only as an example.  
-The same pattern works for any network/domain:
+  * `url`
+  * `query_endpoint`
+  * `capabilities`
+  * optional metadata
 
-- Finance: risk, fraud, pricing, compliance agents
-- Healthcare: triage, diagnostics, drug-check agents
-- DevOps: incident, deployment, observability agents
+The orchestrator and other agents fetch cards using `GET /cards` and route requests based on capability matching.
 
-To extend:
+Routing decisions are driven by metadata, not implementation details.
 
-1. Add a new agent folder under `agents/`.
-2. Give it capabilities + `agent-card`.
-3. Register it to registry on startup.
-4. Add/attach MCP tools if needed.
-5. Existing orchestrator/trainer can discover and call it dynamically.
+Result: Any agent can call any other agent dynamically as long as capability matches.
 
-No architectural change is required to move from 4 agents to N agents.
+---
 
-## Runtime Docs
+## MCP (Model Context Protocol)
 
-Startup commands, local run flow, and quick test commands are in `RUNNING.md`.
+MCP is responsible for domain-level tool execution.
+
+* MCP servers live inside `mcp_servers/`.
+* They expose domain tools such as nutrition planning, workouts, or progress tracking.
+* Agents connect to MCP servers via stdio using `MCPToolClient` (defined in `agents/common.py`).
+* Tools are invoked using:
+
+  ```
+  session.call_tool(...)
+  ```
+
+The result of tool execution is incorporated into the agent’s output plan.
+
+Tool execution is isolated from orchestration logic, making it easy to swap domains without affecting coordination.
+
+---
+
+## Orchestrator
+
+The `orchestrator/` service receives user requests and determines which coordinating agent should handle them.
+
+In this example:
+
+* The orchestrator routes requests to the `trainer_agent`.
+* The trainer dynamically discovers and calls specialized agents (muscle, cardio, diet) based on capability.
+
+The orchestrator does not contain domain logic. It only manages routing and coordination.
+
+---
+
+## Why This Architecture Scales
+
+This repository uses fitness agents (muscle, cardio, diet, trainer) purely as an example.
+
+The same architecture works across domains:
+
+* Finance: risk, fraud, pricing, compliance agents
+* Healthcare: triage, diagnostics, drug-check agents
+* DevOps: incident, deployment, observability agents
+
+To extend the system:
+
+1. Add a new agent under `agents/`
+2. Define its capabilities
+3. Expose its `agent-card`
+4. Register it with the registry on startup
+5. Attach MCP tools if needed
+
+No architectural redesign is required to move from 4 agents to N agents.
+
+The system remains dynamically extensible.
+
+---
+
+## Runtime Documentation
+
+Startup instructions, local execution flow, and quick test commands are available in `RUNNING.md`.
