@@ -1,7 +1,3 @@
-Here is a more compact and readable version with slightly reduced content but keeping the core meaning clear:
-
----
-
 # A2A + MCP Orchestrator
 
 This project demonstrates a scalable multi-agent architecture where agents dynamically discover and call each other, execute domain tools via MCP, and coordinate through a central orchestrator.
